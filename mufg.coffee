@@ -1,11 +1,16 @@
 casper = require('casper').create({ verbose: true, logLevel: 'debug' })
 xpath  = require('casper').selectXPath
 system = require 'system'
+fs     = require 'fs'
 
-system.stdout.write 'id: '
+now = new Date()
+lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+outFile = fs.open("mufg-#{lastMonth.getFullYear()}-#{(lastMonth.getMonth() + 101).toString().substr(-2)}.tsv", 'w')
+
+system.stderr.write 'id: '
 id = system.stdin.readLine()
 
-system.stdout.write 'pass: '
+system.stderr.write 'pass: '
 pass = system.stdin.readLine()
 
 casper.start 'https://entry11.bk.mufg.jp/ibg/dfw/APLIN/loginib/login?_TRANID=AA000_001', ->
@@ -32,9 +37,12 @@ casper.then ->
             not window.__leaving
 
 casper.then ->
-    @echo JSON.stringify @evaluate ->
+    details = @evaluate ->
         $('#no_memo table tr')
             .filter(-> $(@).find('td').length == 5)
             .map(-> [ $(@).find('td').map(-> $(@).text()).toArray() ]).toArray()
+    details.forEach (detail) ->
+        outFile.writeLine(detail.join("\t"))
+    outFile.close()
 
 casper.run()
